@@ -2,53 +2,141 @@
 <html>
 <head>
   <title>Crop Health AI</title>
+
   <style>
-    body { font-family: Arial; margin: 20px; }
-    input, select, button { margin: 5px 0; padding: 8px; }
-    #output { margin-top: 20px; }
-    #chatBox {
-      border: 1px solid #ccc;
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    h3 {
+      margin-top: 20px;
+      color: #444;
+    }
+
+    input, select {
+      width: 100%;
       padding: 10px;
-      height: 200px;
-      overflow-y: auto;
-      margin-top: 10px;
+      margin-top: 8px;
+      margin-bottom: 15px;
       border-radius: 8px;
+      border: 1px solid #ccc;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: #4CAF50;
+    }
+
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #43a047;
+    }
+
+    #chatBox {
+      height: 220px;
+      overflow-y: auto;
       background: #fafafa;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-top: 10px;
+    }
+
+    .user-msg {
+      text-align: right;
+      margin: 6px 0;
+    }
+
+    .ai-msg {
+      text-align: left;
+      margin: 6px 0;
+    }
+
+    .user-msg span {
+      background: #4CAF50;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+
+    .ai-msg span {
+      background: #e0e0e0;
+      padding: 8px 12px;
+      border-radius: 12px;
+      display: inline-block;
     }
   </style>
 </head>
+
 <body>
+
+<div class="container">
 
 <h2>🌿 Crop Health AI</h2>
 
-<h3>Plant Details</h3>
+<div class="card">
+  <h3>Plant Details</h3>
 
-<select id="lang">
-  <option value="English">English</option>
-  <option value="Hindi">Hindi</option>
-  <option value="Kannada">Kannada</option>
-  <option value="Tamil">Tamil</option>
-</select><br>
+  <select id="lang">
+    <option value="English">English</option>
+    <option value="Hindi">Hindi</option>
+    <option value="Kannada">Kannada</option>
+    <option value="Tamil">Tamil</option>
+  </select>
 
-<input id="crop" placeholder="Crop Name"><br>
-<input id="age" placeholder="Plant Age (days)"><br>
-<input id="soil" placeholder="Soil Type"><br>
+  <input id="crop" placeholder="Crop Name">
+  <input id="age" placeholder="Plant Age (days)">
+  <input id="soil" placeholder="Soil Type">
 
-<h3>Upload Image</h3>
-<input type="file" id="image"><br>
+  <h3>Upload Image</h3>
+  <input type="file" id="image">
 
-<button id="analyzeBtn" onclick="submitData()">Analyze</button>
+  <button id="analyzeBtn" onclick="submitData()">Analyze</button>
 
-<div id="output"></div>
+  <div id="output"></div>
+</div>
 
-<hr>
+<div class="card">
+  <h2>💬 Chat Assistant</h2>
 
-<h2>💬 Chat Assistant</h2>
+  <input id="chatInput" placeholder="Ask something...">
+  <button onclick="sendChat()">Send</button>
 
-<input id="chatInput" placeholder="Ask something..." style="width: 250px;">
-<button onclick="sendChat()">Send</button>
+  <div id="chatBox"></div>
+</div>
 
-<div id="chatBox"></div>
+</div>
 
 <!-- Supabase -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -79,7 +167,6 @@ async function submitData() {
       return;
     }
 
-    // Upload image
     const { data, error } = await supabaseClient.storage
       .from('plant-images')
       .upload(`img_${Date.now()}.jpg`, file);
@@ -94,9 +181,7 @@ async function submitData() {
 
     const res = await fetch("https://sufiyanahamed322.app.n8n.cloud/webhook-test/crop-ai", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         crop: document.getElementById("crop").value,
         age: document.getElementById("age").value,
@@ -112,11 +197,8 @@ async function submitData() {
 
     const html = `
       <div style="border:1px solid #ccc; padding:20px; border-radius:10px; margin-top:20px">
-
         <img src="${imageUrl}" width="250"><br><br>
-
         <h2 style="color:red;">${d.disease || "Result"}</h2>
-
         <p><b>Detected:</b> ${d.detected ? "Yes" : "No"}</p>
         <p><b>Confidence:</b> ${
           (typeof d.confidence === "number")
@@ -126,15 +208,10 @@ async function submitData() {
         <p><b>Severity:</b> ${d.severity || "-"}</p>
 
         <h3>Symptoms</h3>
-        <ul>
-          ${(d.symptoms || []).map(s => `<li>${s}</li>`).join("")}
-        </ul>
+        <ul>${(d.symptoms || []).map(s => `<li>${s}</li>`).join("")}</ul>
 
         <h3>Solutions</h3>
-        <ul>
-          ${(d.solutions || []).map(s => `<li>${s}</li>`).join("")}
-        </ul>
-
+        <ul>${(d.solutions || []).map(s => `<li>${s}</li>`).join("")}</ul>
       </div>
     `;
 
@@ -155,12 +232,13 @@ async function submitData() {
 async function sendChat() {
   const input = document.getElementById("chatInput");
   const msg = input.value.trim();
-
   if (!msg) return;
 
   const chatBox = document.getElementById("chatBox");
 
-  chatBox.insertAdjacentHTML("beforeend", `<p><b>You:</b> ${msg}</p>`);
+  chatBox.insertAdjacentHTML("beforeend",
+    `<div class="user-msg"><span>${msg}</span></div>`
+  );
 
   try {
     const res = await fetch("https://sufiyanahamed322.app.n8n.cloud/webhook-test/chat-ai", {
@@ -178,10 +256,14 @@ async function sendChat() {
 
     const data = await res.json();
 
-    chatBox.insertAdjacentHTML("beforeend", `<p><b>AI:</b> ${data.reply}</p>`);
+    chatBox.insertAdjacentHTML("beforeend",
+      `<div class="ai-msg"><span>${data.reply}</span></div>`
+    );
 
   } catch (err) {
-    chatBox.insertAdjacentHTML("beforeend", `<p><b>AI:</b> (Error, try again)</p>`);
+    chatBox.insertAdjacentHTML("beforeend",
+      `<div class="ai-msg"><span>(Error, try again)</span></div>`
+    );
   }
 
   input.value = "";
