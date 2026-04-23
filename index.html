@@ -30,7 +30,7 @@ const { createClient } = supabase;
 
 // 🔥 REPLACE WITH YOUR VALUES
 const supabaseClient = createClient(
-  "https://cxlblacmmvukdhdwviap.supabase.co",
+  "https://cxlblacmmvukdhdwyiap.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4bGJsYWNtbXZ1a2RoZHd5aWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MjE4MDgsImV4cCI6MjA5MjQ5NzgwOH0.xN0HwP2j6G0f7C5z6_pJXfDzb1-bz9EcViwmDzBiupI"
 );
 
@@ -56,7 +56,7 @@ async function submitData() {
   // 🔼 Upload to Supabase
   const { data, error } = await supabaseClient.storage
     .from('plant-images')
-    .upload(`img_${Date.now()}.jpg`, file);
+    .upload(`public/img_${Date.now()}.jpg`, file);
 
   if (error) {
     alert(error.message);
@@ -78,23 +78,7 @@ async function submitData() {
   document.getElementById("output").innerText =
     "Uploaded Image URL:\n" + imageUrl;
 
-  // 🚫 Webhook disabled for now
-  /*
-  const res = await fetch("YOUR_N8N_WEBHOOK_URL", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      crop: document.getElementById("crop").value,
-      age: document.getElementById("age").value,
-      soil: document.getElementById("soil").value,
-      image: imageUrl
-    })
-  });
 
-  const result = await res.json();
-  document.getElementById("output").innerText =
-    JSON.stringify(result, null, 2);
-  */
 }
 </script>
 
