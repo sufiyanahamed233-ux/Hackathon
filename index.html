@@ -132,6 +132,7 @@
 
   <input id="chatInput" placeholder="Ask something...">
   <button onclick="sendChat()">Send</button>
+  <button onclick="startVoice()">🎤 Speak</button>
 
   <div id="chatBox"></div>
 </div>
@@ -255,6 +256,20 @@ async function sendChat() {
     if (!res.ok) throw new Error("Chat API failed");
 
     const data = await res.json();
+    // 🔊 AI voice response
+    const speech = new SpeechSynthesisUtterance(data.reply);
+
+    // language mapping
+    const lang = document.getElementById("lang").value;
+
+    let speechLang = "en-IN";
+    if (lang === "Hindi") speechLang = "hi-IN";
+    if (lang === "Kannada") speechLang = "kn-IN";
+    if (lang === "Tamil") speechLang = "ta-IN";
+
+    speech.lang = speechLang;
+
+    speechSynthesis.speak(speech);
 
     chatBox.insertAdjacentHTML("beforeend",
       `<div class="ai-msg"><span>${data.reply}</span></div>`
@@ -268,6 +283,38 @@ async function sendChat() {
 
   input.value = "";
   chatBox.scrollTop = chatBox.scrollHeight;
+}
+function startVoice() {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert("Use Google Chrome for voice feature");
+    return;
+  }
+
+  const recognition = new webkitSpeechRecognition();
+
+  recognition.lang = "en-IN";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onresult = function (event) {
+    const text = event.results[0][0].transcript;
+    document.getElementById("chatInput").value = text;
+    sendChat();
+  };
+
+  recognition.onerror = function (event) {
+    console.log(event.error);
+
+    if (event.error === "not-allowed") {
+      alert("Allow microphone access");
+    } else if (event.error === "no-speech") {
+      alert("No speech detected");
+    } else {
+      alert("Voice error: " + event.error);
+    }
+  };
+
+  recognition.start();
 }
 </script>
 
