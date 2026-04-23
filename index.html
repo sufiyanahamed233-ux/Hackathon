@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Crop Health AI</title>
+</head>
+<body>
+
+<h2>Login</h2>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+
+<h2>Plant Details</h2>
+<input id="crop" placeholder="Crop Name">
+<input id="age" placeholder="Plant Age (days)">
+<input id="soil" placeholder="Soil Type">
+
+<h3>Upload Image</h3>
+<input type="file" id="image">
+
+<button onclick="submitData()">Analyze</button>
+
+<pre id="output"></pre>
+
+<!-- Supabase CDN -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+<script>
+const { createClient } = supabase;
+
+// 🔥 REPLACE WITH YOUR VALUES
+const supabaseClient = createClient(
+  "https://cxlblacmmvukdhdwviap.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4bGJsYWNtbXZ1a2RoZHd5aWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MjE4MDgsImV4cCI6MjA5MjQ5NzgwOH0.xN0HwP2j6G0f7C5z6_pJXfDzb1-bz9EcViwmDzBiupI"
+);
+
+// ✅ LOGIN FUNCTION
+async function login() {
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: document.getElementById("email").value,
+    password: document.getElementById("password").value
+  });
+
+  alert(error ? error.message : "Logged in!");
+}
+
+// ✅ MAIN FUNCTION
+async function submitData() {
+  const file = document.getElementById("image").files[0];
+
+  if (!file) {
+    alert("Please select an image!");
+    return;
+  }
+
+  // 🔼 Upload to Supabase
+  const { data, error } = await supabaseClient.storage
+    .from('plant-images')
+    .upload(`img_${Date.now()}.jpg`, file);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  // 🔗 Get public URL
+  const { data: urlData } = supabaseClient.storage
+    .from('plant-images')
+    .getPublicUrl(data.path);
+
+  const imageUrl = urlData.publicUrl;
+
+  // ✅ TEST OUTPUT (for now)
+  alert("Upload successful!");
+  console.log("Path:", data.path);
+  console.log("Public URL:", imageUrl);
+
+  document.getElementById("output").innerText =
+    "Uploaded Image URL:\n" + imageUrl;
+
+  // 🚫 Webhook disabled for now
+  /*
+  const res = await fetch("YOUR_N8N_WEBHOOK_URL", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      crop: document.getElementById("crop").value,
+      age: document.getElementById("age").value,
+      soil: document.getElementById("soil").value,
+      image: imageUrl
+    })
+  });
+
+  const result = await res.json();
+  document.getElementById("output").innerText =
+    JSON.stringify(result, null, 2);
+  */
+}
+</script>
+
+</body>
+</html>
