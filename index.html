@@ -2,29 +2,53 @@
 <html>
 <head>
   <title>Crop Health AI</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    input, select, button { margin: 5px 0; padding: 8px; }
+    #output { margin-top: 20px; }
+    #chatBox {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+  </style>
 </head>
 <body>
 
 <h2>🌿 Crop Health AI</h2>
 
 <h3>Plant Details</h3>
-<h3>Select Language</h3>
+
 <select id="lang">
   <option value="English">English</option>
   <option value="Hindi">Hindi</option>
   <option value="Kannada">Kannada</option>
   <option value="Tamil">Tamil</option>
-</select>
-<input id="crop" placeholder="Crop Name"><br><br>
-<input id="age" placeholder="Plant Age (days)"><br><br>
-<input id="soil" placeholder="Soil Type"><br><br>
+</select><br>
+
+<input id="crop" placeholder="Crop Name"><br>
+<input id="age" placeholder="Plant Age (days)"><br>
+<input id="soil" placeholder="Soil Type"><br>
 
 <h3>Upload Image</h3>
-<input type="file" id="image"><br><br>
+<input type="file" id="image"><br>
 
-<button onclick="submitData()">Analyze</button>
+<button id="analyzeBtn" onclick="submitData()">Analyze</button>
 
 <div id="output"></div>
+
+<hr>
+
+<h2>💬 Chat Assistant</h2>
+
+<input id="chatInput" placeholder="Ask something..." style="width: 250px;">
+<button onclick="sendChat()">Send</button>
+
+<div id="chatBox"></div>
 
 <!-- Supabase -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -37,76 +61,131 @@ const supabaseClient = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4bGJsYWNtbXZ1a2RoZHd5aWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MjE4MDgsImV4cCI6MjA5MjQ5NzgwOH0.xN0HwP2j6G0f7C5z6_pJXfDzb1-bz9EcViwmDzBiupI"
 );
 
-// MAIN FUNCTION
+// =====================
+// IMAGE ANALYSIS
+// =====================
 async function submitData() {
 
-  const file = document.getElementById("image").files[0];
-  if (!file) {
-    alert("Select an image first");
-    return;
+  const btn = document.getElementById("analyzeBtn");
+  btn.disabled = true;
+  btn.innerText = "Analyzing...";
+
+  try {
+    const file = document.getElementById("image").files[0];
+    if (!file) {
+      alert("Select an image first");
+      btn.disabled = false;
+      btn.innerText = "Analyze";
+      return;
+    }
+
+    // Upload image
+    const { data, error } = await supabaseClient.storage
+      .from('plant-images')
+      .upload(`img_${Date.now()}.jpg`, file);
+
+    if (error) throw error;
+
+    const { data: urlData } = supabaseClient.storage
+      .from('plant-images')
+      .getPublicUrl(data.path);
+
+    const imageUrl = urlData.publicUrl;
+
+    const res = await fetch("https://sufiyanahamed322.app.n8n.cloud/webhook-test/crop-ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        crop: document.getElementById("crop").value,
+        age: document.getElementById("age").value,
+        soil: document.getElementById("soil").value,
+        image: imageUrl,
+        language: document.getElementById("lang").value
+      })
+    });
+
+    if (!res.ok) throw new Error("API failed");
+
+    const d = await res.json();
+
+    const html = `
+      <div style="border:1px solid #ccc; padding:20px; border-radius:10px; margin-top:20px">
+
+        <img src="${imageUrl}" width="250"><br><br>
+
+        <h2 style="color:red;">${d.disease || "Result"}</h2>
+
+        <p><b>Detected:</b> ${d.detected ? "Yes" : "No"}</p>
+        <p><b>Confidence:</b> ${
+          (typeof d.confidence === "number")
+            ? Math.round(d.confidence * 100) + "%"
+            : d.confidence || "-"
+        }</p>
+        <p><b>Severity:</b> ${d.severity || "-"}</p>
+
+        <h3>Symptoms</h3>
+        <ul>
+          ${(d.symptoms || []).map(s => `<li>${s}</li>`).join("")}
+        </ul>
+
+        <h3>Solutions</h3>
+        <ul>
+          ${(d.solutions || []).map(s => `<li>${s}</li>`).join("")}
+        </ul>
+
+      </div>
+    `;
+
+    document.getElementById("output").innerHTML = html;
+
+  } catch (err) {
+    alert("Error: " + err.message);
   }
 
-  // Upload image
-  const { data, error } = await supabaseClient.storage
-    .from('plant-images')
-    .upload(`img_${Date.now()}.jpg`, file);
+  btn.disabled = false;
+  btn.innerText = "Analyze";
+}
 
-  if (error) {
-    alert(error.message);
-    return;
+
+// =====================
+// CHATBOT
+// =====================
+async function sendChat() {
+  const input = document.getElementById("chatInput");
+  const msg = input.value.trim();
+
+  if (!msg) return;
+
+  const chatBox = document.getElementById("chatBox");
+
+  chatBox.insertAdjacentHTML("beforeend", `<p><b>You:</b> ${msg}</p>`);
+
+  try {
+    const res = await fetch("https://sufiyanahamed322.app.n8n.cloud/webhook-test/chat-ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: msg,
+        language: document.getElementById("lang").value
+      })
+    });
+
+    if (!res.ok) throw new Error("Chat API failed");
+
+    const data = await res.json();
+
+    chatBox.insertAdjacentHTML("beforeend", `<p><b>AI:</b> ${data.reply}</p>`);
+
+  } catch (err) {
+    chatBox.insertAdjacentHTML("beforeend", `<p><b>AI:</b> (Error, try again)</p>`);
   }
 
-  // Get public URL
-  const { data: urlData } = supabaseClient.storage
-    .from('plant-images')
-    .getPublicUrl(data.path);
-
-  const imageUrl = urlData.publicUrl;
-
-  // Call n8n webhook
-  const res = await fetch("https://sufiyanahamed322.app.n8n.cloud/webhook-test/crop-ai", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      crop: document.getElementById("crop").value,
-      age: document.getElementById("age").value,
-      soil: document.getElementById("soil").value,
-      image: imageUrl,
-      language: document.getElementById("lang").value
-})
-  });
-
-  const dataJson = await res.json();
-  const d = dataJson;
-
-  // UI OUTPUT
-  const html = `
-    <div style="border:1px solid #ccc; padding:20px; border-radius:10px; margin-top:20px">
-
-      <img src="${imageUrl}" width="250"><br><br>
-
-      <h2 style="color:red;">${d.disease || "Result"}</h2>
-
-      <p><b>Detected:</b> ${d.detected ? "Yes" : "No"}</p>
-      <p><b>Confidence:</b> ${d.confidence ? Math.round(d.confidence * 100) + "%" : "-"}</p>
-      <p><b>Severity:</b> ${d.severity || "-"}</p>
-
-      <h3>Symptoms</h3>
-      <ul>
-        ${(d.symptoms || []).map(s => `<li>${s}</li>`).join("")}
-      </ul>
-
-      <h3>Solutions</h3>
-      <ul>
-        ${(d.solutions || []).map(s => `<li>${s}</li>`).join("")}
-      </ul>
-
-    </div>
-  `;
-
-  document.getElementById("output").innerHTML = html;
+  input.value = "";
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 </script>
 
