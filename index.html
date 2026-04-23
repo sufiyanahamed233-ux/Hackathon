@@ -2,7 +2,36 @@
 <html>
 <head>
   <title>Crop Health AI</title>
+
+  <style>
+    body {
+      font-family: Arial;
+    }
+
+    #output {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 10px;
+      background: #f5f5f5;
+      max-width: 500px;
+    }
+
+    #output h3 {
+      color: red;
+      margin-bottom: 5px;
+    }
+
+    #output p {
+      margin: 5px 0;
+    }
+
+    #output ul {
+      margin-top: 5px;
+      padding-left: 20px;
+    }
+  </style>
 </head>
+
 <body>
 
 <h2>Login</h2>
@@ -20,21 +49,18 @@
 
 <button onclick="submitData()">Analyze</button>
 
-<pre id="output"></pre>
+<div id="output"></div>
 
-<!-- Supabase CDN -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
 <script>
 const { createClient } = supabase;
 
-// 🔥 REPLACE WITH YOUR VALUES
 const supabaseClient = createClient(
   "https://cxlblacmmvukdhdwyiap.supabase.co",
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4bGJsYWNtbXZ1a2RoZHd5aWFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MjE4MDgsImV4cCI6MjA5MjQ5NzgwOH0.xN0HwP2j6G0f7C5z6_pJXfDzb1-bz9EcViwmDzBiupI"
 );
 
-// ✅ LOGIN FUNCTION
 async function login() {
   const { error } = await supabaseClient.auth.signInWithPassword({
     email: document.getElementById("email").value,
@@ -44,7 +70,6 @@ async function login() {
   alert(error ? error.message : "Logged in!");
 }
 
-// ✅ MAIN FUNCTION
 async function submitData() {
   const file = document.getElementById("image").files[0];
 
@@ -53,7 +78,6 @@ async function submitData() {
     return;
   }
 
-  // 🔼 Upload to Supabase
   const { data, error } = await supabaseClient.storage
     .from('plant-images')
     .upload(`/img_${Date.now()}.jpg`, file);
@@ -63,37 +87,59 @@ async function submitData() {
     return;
   }
 
-  // 🔗 Get public URL
   const { data: urlData } = supabaseClient.storage
     .from('plant-images')
     .getPublicUrl(data.path);
 
-  const imageUrl = urlData.publicUrl;
-  // 🔗 send data to n8n webhook
-    const res = await fetch("https://sufiyanahamed322.app.n8n.cloud/webhook-test/crop-ai", {
+  const res = await fetch("https://sufiyanahamed322.app.n8n.cloud/webhook-test/crop-ai", {
     method: "POST",
     headers: {
-        "Content-Type": "application/json"
+      "Content-Type": "application/json"
     },
     body: JSON.stringify({
-        crop: document.getElementById("crop").value,
-        age: document.getElementById("age").value,
-        soil: document.getElementById("soil").value,
-        image: imageUrl
+      crop: document.getElementById("crop").value,
+      age: document.getElementById("age").value,
+      soil: document.getElementById("soil").value,
+      image: urlData.publicUrl
     })
-    });
-    const text = await res.text();
-    console.log(text);
+  });
 
-    // show on screen
-    const clean = text.replace(/^{"result":"|"}$/g, "");
-    document.getElementById("output").innerText = clean;
+  const text = await res.text();
 
+  let clean = text;
+  try {
+    const parsed = JSON.parse(text);
+    clean = parsed.result;
+  } catch {}
 
+  formatOutput(clean);
+}
 
+function formatOutput(text) {
+  const lines = text.split("\n");
 
+  let html = "<ul>";
 
+  lines.forEach(line => {
+    line = line.trim();
 
+    if (line.includes("Disease Detected")) {
+      html += `<h3>${line}</h3>`;
+    } 
+    else if (line.includes("Disease Name") || line.includes("Confidence")) {
+      html += `<p><b>${line}</b></p>`;
+    } 
+    else if (line.includes("Actionable Suggestions")) {
+      html += `</ul><h4>💡 Recommendations:</h4><ul>`;
+    } 
+    else if (line.startsWith("-")) {
+      html += `<li>${line.replace("-", "").trim()}</li>`;
+    }
+  });
+
+  html += "</ul>";
+
+  document.getElementById("output").innerHTML = html;
 }
 </script>
 
