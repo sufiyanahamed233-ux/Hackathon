@@ -56,7 +56,7 @@ async function submitData() {
   // 🔼 Upload to Supabase
   const { data, error } = await supabaseClient.storage
     .from('plant-images')
-    .upload(`public/img_${Date.now()}.jpg`, file);
+    .upload(`/img_${Date.now()}.jpg`, file);
 
   if (error) {
     alert(error.message);
@@ -69,14 +69,29 @@ async function submitData() {
     .getPublicUrl(data.path);
 
   const imageUrl = urlData.publicUrl;
+  // 🔗 send data to n8n webhook
+    const res = await fetch("https://sufiyanahamed322.app.n8n.cloud/webhook-test/crop-ai", {
+    method: "POST",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+        crop: document.getElementById("crop").value,
+        age: document.getElementById("age").value,
+        soil: document.getElementById("soil").value,
+        image: imageUrl
+    })
+    });
+    const text = await res.text();
+    console.log(text);
 
-  // ✅ TEST OUTPUT (for now)
-  alert("Upload successful!");
-  console.log("Path:", data.path);
-  console.log("Public URL:", imageUrl);
+    // show on screen
+    const clean = text.replace(/^{"result":"|"}$/g, "");
+    document.getElementById("output").innerText = clean;
 
-  document.getElementById("output").innerText =
-    "Uploaded Image URL:\n" + imageUrl;
+
+
+
 
 
 }
