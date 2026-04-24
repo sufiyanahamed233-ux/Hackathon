@@ -189,12 +189,15 @@ async function submitData() {
         soil: document.getElementById("soil").value,
         image: imageUrl,
         language: document.getElementById("lang").value
+        
+
       })
     });
 
     if (!res.ok) throw new Error("API failed");
 
-    const d = await res.json();
+    const raw = await res.json();
+    const d = JSON.parse(raw.reply);
 
     const html = `
       <div style="border:1px solid #ccc; padding:20px; border-radius:10px; margin-top:20px">
