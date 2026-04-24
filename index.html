@@ -295,7 +295,15 @@ function startVoice() {
 
   const recognition = new webkitSpeechRecognition();
 
-  recognition.lang = "en-IN";
+  const lang = document.getElementById("lang").value;
+
+  let recognitionLang = "en-IN";
+
+  if (lang === "Hindi") recognitionLang = "hi-IN";
+  if (lang === "Kannada") recognitionLang = "kn-IN";
+  if (lang === "Tamil") recognitionLang = "ta-IN";
+
+  recognition.lang = recognitionLang;
   recognition.continuous = false;
   recognition.interimResults = false;
 
